@@ -1,0 +1,391 @@
+---
+title: "Analysis Of Fund dongfanghong"
+author: "Wu Wei"
+date: "2017-9-7"
+output: html_document
+---
+
+
+
+## 1 Library input & Data Input
+```{r, eval=TRUE}
+suppressMessages(library(forecast))
+suppressMessages(library(ggplot2))
+suppressMessages(library(rugarch))
+suppressMessages(library(lmtest))
+suppressMessages(library(tseries))
+suppressMessages(library(fBasics))
+
+suppressMessages(library("FinTS"))
+```
+
+```{r source, echo = FALSE}
+source("d://MyR//zhao//ComputeMarketModel.R")
+source("d://MyR//zhao//ComputeTMModel.R")
+source("d://MyR//zhao//ComputeHMModel.R")
+```
+
+```{r, eval=TRUE}
+setwd("d://MyR//dongfanghong//")
+dongfanghong.original.data <- read.csv("dongfanghongmonthlyjingzhi.csv")
+# (original.data)
+
+dongfanghong.close.price <- ts(dongfanghong.original.data[,2], start = c(2015, 7), frequency = 12)
+
+money.interest <- ts(dongfanghong.original.data[,3], start = c(2015, 7), frequency = 12)
+hushen300.price <- ts(dongfanghong.original.data[,4], start = c(2015, 7), frequency = 12)
+zz500.price <- ts(dongfanghong.original.data[,5], start = c(2015, 7), frequency = 12)
+zz800.price <- ts(dongfanghong.original.data[,6], start = c(2015, 7), frequency = 12)
+szhl.price <- ts(dongfanghong.original.data[,7], start = c(2015, 7), frequency = 12)
+```
+
+```{r}
+dongfanghong.monthly.return <- ts(diff(log(dongfanghong.close.price)), start = c(2015,8), frequency = 12)
+
+hushen300.monthly.return <- diff(log(hushen300.price))
+
+zz500.monthly.return <- diff(log(zz500.price))
+
+zz800.monthly.return <- diff(log(zz800.price))
+
+szhl.monthly.return <- diff(log(szhl.price))
+
+money.monthly.interest <- ts(log(1 + (money.interest[-1] / 12)),start = c(2015, 8), frequency = 12)
+```
+
+```{r}
+hushen300.monthly.return.no.risk <- ts(round(as.numeric(hushen300.monthly.return - money.monthly.interest) * 100, 
+                                              digits = 2), 
+                                       start = c(2015, 8), frequency = 12)
+
+zz500.monthly.return.no.risk <- ts(round(as.numeric(zz500.monthly.return - money.monthly.interest) * 100, 
+                                              digits = 2), 
+                                       start = c(2015, 8), frequency = 12)
+
+zz800.monthly.return.no.risk <- ts(round(as.numeric(zz800.monthly.return - money.monthly.interest) * 100, 
+                                              digits = 2), 
+                                       start = c(2015, 8), frequency = 12)
+
+szhl.monthly.return.no.risk <- ts(round(as.numeric(szhl.monthly.return - money.monthly.interest) * 100, 
+                                              digits = 2), 
+                                       start = c(2015, 8), frequency = 12)
+
+dongfanghong.monthly.return.no.risk <- ts(round(as.numeric((dongfanghong.monthly.return - money.monthly.interest) * 100),
+                                     digits = 2),start = c(2015, 8), frequency = 12)
+
+```
+
+
+```{r, eval=TRUE}
+zhao.original.data <- read.csv("d://MyR//zhao//zhao.csv")
+zhao.close.price <- as.ts(zhao.original.data[,2])
+
+```
+
+```{r}
+zhao.monthly.return <- diff(log(zhao.close.price))
+```
+
+```{r}
+dongfanghong.yearly.return <- diff(log(dongfanghong.close.price), lag = 12)
+```
+
+
+## 2 Analysis for monthly return
+```{r, eval=TRUE}
+
+
+# date <- as.character(dongfanghong.original.data$X)
+
+# names(dongfanghong.monthly.return) <- date[-c(1,length(date))]
+
+
+
+plot(dongfanghong.monthly.return, type = "l")
+
+abline(h = 0, col = "red")
+```
+
+```{r, eval=TRUE}
+
+ndiffs(dongfanghong.monthly.return)
+
+```
+
+```{r, fig.height=8, fig.width=10}
+
+tsdisplay(dongfanghong.monthly.return)
+
+```
+
+
+
+```{r, eval=TRUE}
+mean(dongfanghong.monthly.return)
+
+mean(dongfanghong.monthly.return) * 12
+
+sd(dongfanghong.monthly.return)
+
+sd(dongfanghong.monthly.return) * sqrt(12)
+
+quantile(dongfanghong.monthly.return, c(0.05, seq(0,1,0.25)))
+
+skewness(dongfanghong.monthly.return)
+kurtosis(dongfanghong.monthly.return)
+jarqueberaTest(dongfanghong.monthly.return)
+
+
+```
+
+
+```{r, eval=TRUE}
+
+
+cor(dongfanghong.monthly.return, 
+    tail(zhao.monthly.return, length(dongfanghong.monthly.return)))
+
+
+```
+
+## 3.  Analysis of monthly return between dongfanghong and hushen300 with money interest subtracted
+
+### 3.1 Analysis of total data
+
+
+```{r}
+cor(hushen300.monthly.return.no.risk, dongfanghong.monthly.return.no.risk)
+
+cor(hushen300.monthly.return.no.risk, zz500.monthly.return.no.risk)
+cor(hushen300.monthly.return.no.risk, szhl.monthly.return.no.risk)
+cor(szhl.monthly.return.no.risk, zz500.monthly.return.no.risk)
+```
+
+```{r}
+fit.0 <- lm(zz800.monthly.return.no.risk ~ hushen300.monthly.return.no.risk + 
+                    zz500.monthly.return.no.risk)
+
+summary(fit.0)
+```
+
+
+```{r}
+fit <- lm(dongfanghong.monthly.return.no.risk ~ hushen300.monthly.return.no.risk)
+
+summary(fit)
+```
+
+```{r}
+
+fit.2 <- lm(dongfanghong.monthly.return.no.risk ~ hushen300.monthly.return.no.risk + zz500.monthly.return.no.risk)
+
+summary(fit.2)
+```
+
+```{r}
+
+fit.3 <- lm(dongfanghong.monthly.return.no.risk ~ zz800.monthly.return.no.risk)
+
+summary(fit.3)
+```
+
+```{r}
+
+fit.4 <- lm(dongfanghong.monthly.return.no.risk ~ zz500.monthly.return.no.risk)
+
+summary(fit.4)
+```
+
+```{r}
+
+fit.5 <- lm(dongfanghong.monthly.return.no.risk ~ szhl.monthly.return.no.risk)
+
+summary(fit.5)
+```
+
+```{r}
+
+fit.6 <- lm(dongfanghong.monthly.return.no.risk ~ zz500.monthly.return.no.risk + szhl.monthly.return.no.risk)
+
+summary(fit.6)
+```
+
+```{r, fig.height=6, fig.width=8}
+plot(as.numeric(hushen300.monthly.return.no.risk), 
+     as.numeric(dongfanghong.monthly.return.no.risk), 
+     type = "p", 
+     xlab = "沪深300月度超额收益率%", 
+     ylab = "东方红京东大数据月度超额收益率%", 
+     main = "证券特征线")
+
+abline(h = 0, v = 0, col = "green")
+points(tail(hushen300.monthly.return.no.risk), tail(dongfanghong.monthly.return.no.risk), col = "purple", pch = 20)
+
+abline(fit)
+
+```
+
+### 3.1.1 Analysis of total data using TM model
+```{r}
+hushen300.monthly.return.square <- hushen300.monthly.return.no.risk^2
+
+fit.tm <- lm(dongfanghong.monthly.return.no.risk ~ hushen300.monthly.return.no.risk + 
+                     hushen300.monthly.return.square)
+
+summary(fit.tm)
+```
+
+### 3.1.2 Analysis of total data using HM model
+```{r}
+
+hushen300.monthly.return.positive <- hushen300.monthly.return.no.risk
+hushen300.monthly.return.positive[hushen300.monthly.return.positive < 0] <- 0
+
+fit.hm <- lm(dongfanghong.monthly.return.no.risk ~ hushen300.monthly.return.no.risk + 
+                     hushen300.monthly.return.positive)
+
+summary(fit.hm)
+```
+
+### 3.2 Analysis of moving 12 months data
+
+```{r}
+alpha <- ts(rep(0,length(dongfanghong.monthly.return.no.risk)), start = c(2015, 8), frequency = 12)
+beta <- alpha
+gamma <- alpha
+
+return.matrix.tm <- cbind(dongfanghong.monthly.return.no.risk, 
+                       hushen300.monthly.return.no.risk, 
+                       alpha, 
+                       beta,
+                       gamma) 
+
+dimnames(return.matrix.tm)[[2]][1] <- "dongfanghong"
+dimnames(return.matrix.tm)[[2]][2] <- "hushen300"
+
+return.matrix.hm <- return.matrix.tm
+
+return.matrix <- return.matrix.tm[,1:4]
+```
+
+```{r}
+(return.matrix <- ComputeMarketModel(return.matrix))
+```
+
+```{r, fig.height=10, fig.width=10}
+plot.layout.matrix <- matrix(c(1,2,3), 
+                             nr = 3,
+                             byrow = TRUE)
+
+layout(plot.layout.matrix)
+
+plot(return.matrix[,"dongfanghong"])
+abline(h = 0, col = "green")
+
+plot(return.matrix[,"alpha"])
+abline(h = 0, col = "green")
+
+plot(return.matrix[,"beta"])
+abline(h = 0, col = "green")
+
+layout(matrix(1))
+```
+
+#### 3.2.1 Analysis of moving 12 months data using TM model
+
+
+```{r}
+(return.matrix.tm <- ComputeTMModel(return.matrix.tm))
+```
+
+```{r, fig.height=12, fig.width=10}
+plot.layout.matrix <- matrix(c(1,2,3,4), 
+                             nr = 4,
+                             byrow = TRUE)
+
+layout(plot.layout.matrix)
+
+plot(return.matrix.tm[,"dongfanghong"])
+abline(h = 0, col = "green")
+
+plot(return.matrix.tm[,"alpha"])
+abline(h = 0, col = "green")
+
+plot(return.matrix.tm[,"beta"])
+abline(h = 0, col = "green")
+
+plot(return.matrix.tm[,"gamma"])
+abline(h = 0, col = "green")
+
+layout(matrix(1))
+```
+
+#### 3.2.2 Analysis of moving 12 months data using HM model
+
+
+```{r}
+(return.matrix.hm <- ComputeHMModel(return.matrix.hm))
+```
+
+```{r, fig.height=12, fig.width=10}
+plot.layout.matrix <- matrix(c(1,2,3,4), 
+                             nr = 4,
+                             byrow = TRUE)
+
+layout(plot.layout.matrix)
+
+plot(return.matrix.hm[,"dongfanghong"])
+abline(h = 0, col = "green")
+
+plot(return.matrix.hm[,"alpha"])
+abline(h = 0, col = "green")
+
+plot(return.matrix.hm[,"beta"])
+abline(h = 0, col = "green")
+
+plot(return.matrix.hm[,"gamma"])
+abline(h = 0, col = "green")
+
+layout(matrix(1))
+```
+
+
+## 4 Analysis for yearly return
+
+```{r, eval=TRUE}
+
+
+plot(dongfanghong.yearly.return, type = "l")
+abline(h = 0, col = "red")
+```
+
+```{r, eval=TRUE}
+
+ndiffs(dongfanghong.yearly.return)
+
+```
+
+```{r, fig.height=8, fig.width=10}
+
+tsdisplay(dongfanghong.yearly.return)
+
+```
+
+
+```{r, eval=TRUE}
+mean(dongfanghong.yearly.return)
+sd(dongfanghong.yearly.return)
+
+quantile(dongfanghong.yearly.return, c(0.05, seq(0,1,0.25)))
+
+tail(dongfanghong.yearly.return, 2)
+
+skewness(dongfanghong.yearly.return)
+kurtosis(dongfanghong.yearly.return)
+jarqueberaTest(dongfanghong.yearly.return)
+
+Acf(dongfanghong.yearly.return)
+```
+
+
+
